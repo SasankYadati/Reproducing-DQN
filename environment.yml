@@ -1,0 +1,32 @@
+name: gym-torch
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - ca-certificates=2021.10.8=h5b45459_0
+  - cloudpickle=2.0.0=pyhd8ed1ab_0
+  - gym=0.21.0=py39h832f523_0
+  - intel-openmp=2021.4.0=h57928b3_3556
+  - libblas=3.9.0=12_win64_mkl
+  - libcblas=3.9.0=12_win64_mkl
+  - liblapack=3.9.0=12_win64_mkl
+  - mkl=2021.4.0=h0e2418a_729
+  - numpy=1.21.4=py39h6635163_0
+  - openssl=3.0.0=h8ffe710_2
+  - pip=21.3.1=pyhd8ed1ab_0
+  - python=3.9.7=h900ac77_3_cpython
+  - python_abi=3.9=2_cp39
+  - setuptools=59.4.0=py39hcbf5309_0
+  - sqlite=3.37.0=h8ffe710_0
+  - tbb=2021.4.0=h2d74725_1
+  - tzdata=2021e=he74cb21_0
+  - ucrt=10.0.20348.0=h57928b3_0
+  - vc=14.2=hb210afc_5
+  - vs2015_runtime=14.29.30037=h902a5da_5
+  - wheel=0.37.0=pyhd8ed1ab_1
+  - pip:
+    - ale-py==0.7.3
+    - importlib-resources==5.4.0
+    - zipp==3.6.0
+prefix: C:\Users\Sai Sasank Y\.conda\envs\gym-torch
+
