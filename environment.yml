@@ -1,32 +1,95 @@
-name: gym-torch
+name: reproduce-research
 channels:
+  - pytorch
   - conda-forge
   - defaults
 dependencies:
-  - ca-certificates=2021.10.8=h5b45459_0
+  - backcall=0.2.0=pyhd3eb1b0_0
+  - blas=1.0=mkl
+  - ca-certificates=2021.10.26=haa95532_2
   - cloudpickle=2.0.0=pyhd8ed1ab_0
+  - colorama=0.4.4=pyhd3eb1b0_0
+  - cudatoolkit=11.3.1=h59b6b97_2
+  - debugpy=1.5.1=py39hd77b12b_0
+  - decorator=5.1.0=pyhd3eb1b0_0
+  - entrypoints=0.3=py39haa95532_0
+  - freetype=2.10.4=hd328e21_0
   - gym=0.21.0=py39h832f523_0
   - intel-openmp=2021.4.0=h57928b3_3556
+  - ipykernel=6.4.1=py39haa95532_1
+  - ipython=7.29.0=py39hd4e2768_0
+  - ipython_genutils=0.2.0=pyhd3eb1b0_1
+  - jedi=0.18.0=py39haa95532_1
+  - jpeg=9d=h2bbff1b_0
+  - jupyter_client=7.0.6=pyhd3eb1b0_0
+  - jupyter_core=4.9.1=py39haa95532_0
   - libblas=3.9.0=12_win64_mkl
   - libcblas=3.9.0=12_win64_mkl
   - liblapack=3.9.0=12_win64_mkl
+  - libpng=1.6.37=h2a8f88b_0
+  - libtiff=4.2.0=hd0e1b90_0
+  - libuv=1.40.0=he774522_0
+  - libwebp=1.2.0=h2bbff1b_0
+  - lz4-c=1.9.3=h2bbff1b_1
+  - matplotlib-inline=0.1.2=pyhd3eb1b0_2
   - mkl=2021.4.0=h0e2418a_729
+  - nest-asyncio=1.5.1=pyhd3eb1b0_0
   - numpy=1.21.4=py39h6635163_0
+  - olefile=0.46=pyhd3eb1b0_0
   - openssl=3.0.0=h8ffe710_2
+  - parso=0.8.2=pyhd3eb1b0_0
+  - pickleshare=0.7.5=pyhd3eb1b0_1003
   - pip=21.3.1=pyhd8ed1ab_0
+  - prompt-toolkit=3.0.20=pyhd3eb1b0_0
+  - pygments=2.10.0=pyhd3eb1b0_0
   - python=3.9.7=h900ac77_3_cpython
+  - python-dateutil=2.8.2=pyhd3eb1b0_0
   - python_abi=3.9=2_cp39
+  - pytorch=1.10.1=py3.9_cuda11.3_cudnn8_0
+  - pytorch-mutex=1.0=cuda
+  - pywin32=302=py39h827c3e9_1
+  - pyzmq=22.3.0=py39hd77b12b_2
   - setuptools=59.4.0=py39hcbf5309_0
+  - six=1.16.0=pyhd3eb1b0_0
   - sqlite=3.37.0=h8ffe710_0
   - tbb=2021.4.0=h2d74725_1
+  - tk=8.6.11=h2bbff1b_0
+  - torchaudio=0.10.1=py39_cu113
+  - torchvision=0.11.2=py39_cu113
+  - tornado=6.1=py39h2bbff1b_0
+  - traitlets=5.1.1=pyhd3eb1b0_0
+  - typing_extensions=3.10.0.2=pyh06a4308_0
   - tzdata=2021e=he74cb21_0
   - ucrt=10.0.20348.0=h57928b3_0
   - vc=14.2=hb210afc_5
   - vs2015_runtime=14.29.30037=h902a5da_5
+  - wcwidth=0.2.5=pyhd3eb1b0_0
   - wheel=0.37.0=pyhd8ed1ab_1
+  - xz=5.2.5=h62dcd97_0
+  - zlib=1.2.11=h8cc25b3_4
+  - zstd=1.4.9=h19a0ad4_0
   - pip:
     - ale-py==0.7.3
+    - autorom==0.4.2
+    - autorom-accept-rom-license==0.4.2
+    - certifi==2021.10.8
+    - cffi==1.15.0
+    - charset-normalizer==2.0.9
+    - click==8.0.3
+    - cython==0.29.26
+    - glfw==2.5.0
+    - idna==3.3
+    - imageio==2.13.4
     - importlib-resources==5.4.0
+    - lockfile==0.12.2
+    - opencv-python==4.5.4.60
+    - pillow==8.4.0
+    - pycparser==2.21
+    - pyglet==1.5.21
+    - requests==2.26.0
+    - scipy==1.7.3
+    - tqdm==4.62.3
+    - urllib3==1.26.7
     - zipp==3.6.0
-prefix: C:\Users\Sai Sasank Y\.conda\envs\gym-torch
+prefix: C:\Users\Sai Sasank Y\.conda\envs\reproduce-research
 
