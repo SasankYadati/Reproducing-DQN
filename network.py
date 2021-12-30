@@ -10,8 +10,7 @@ class CNN(torch.nn.Module):
             torch.nn.Flatten(),
             torch.nn.Linear(2592,256),
             torch.nn.ReLU(),
-            torch.nn.Linear(256, num_classes),
-            torch.nn.Softmax(1)
+            torch.nn.Linear(256, num_classes)
         )
 
     def forward(self, x):
