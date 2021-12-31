@@ -16,9 +16,9 @@ class Transition:
 class DQNAgent:
     def __init__(self, num_actions):
         self.replay_memory = deque()
-        self.MEMORY_CAPCITY = 10000
-        self.q_network = CNN(num_actions)
-        self.q_network_target = CNN(num_actions)
+        self.MEMORY_CAPCITY = 1000000
+        self.q_network = CNN(num_actions).to('cuda')
+        self.q_network_target = CNN(num_actions).to('cuda')
         self.latest_observations_preprocessed = deque(
             [
                 torch.zeros(1,84,84),
@@ -32,12 +32,12 @@ class DQNAgent:
         self.action = None
         self.curr_state = None
         self.step = 0
-        self.EPSILON_MIN = 0.25
+        self.EPSILON_MIN = 0.1
         self.EPSILON_INITIAL = 1.0
-        self.MAX_ANNEALING_STEPS = 50000
-        self.BATCH_SIZE = 64
+        self.MAX_ANNEALING_STEPS = 1000000
+        self.BATCH_SIZE = 32
         self.GAMMA = 0.9
-        self.UPDATE_TARGET_STEP = 500
+        self.UPDATE_TARGET_STEP = 250
         self.criterion = torch.nn.MSELoss()
         self.optimizer = torch.optim.RMSprop(self.q_network.parameters())
 
@@ -68,7 +68,7 @@ class DQNAgent:
         if random.random() <= epsilon:
             self.action = random.randint(0, self.num_actions-1)
         else:
-            self.action = torch.argmax(self.q_network_target(self.curr_state), 1)[0]            
+            self.action = torch.argmax(self.q_network_target(self.curr_state.to('cuda')), 1)[0]            
         loss = 0.0
         if len(self.replay_memory) >= self.BATCH_SIZE:
             loss = self.update_network(DQNAgent.sample_transistions_from_experience(self.replay_memory, self.BATCH_SIZE), self.q_network, self.GAMMA, self.criterion, self.optimizer, self.num_actions)
@@ -79,17 +79,18 @@ class DQNAgent:
 
     def update_network(self, transitions, q_net, gamma, criterion, optimizer, num_actions):
         num_transistions = len(transitions)
-        inputs = torch.cat([t.curr_state for t in transitions])
-        targets = torch.cat([torch.zeros((1,num_actions)) for _ in transitions])
+        inputs = torch.cat([t.curr_state for t in transitions]).view(num_transistions, 4, 84, 84).to('cuda')
+        targets = torch.cat([torch.zeros((1,num_actions)) for _ in transitions]).view(num_transistions, num_actions).to('cuda')
         for i,t in enumerate(transitions):
             if t.is_terminal:
                 targets[i][t.action] = t.reward
             else:
-                q_val_next = torch.max(q_net(t.next_state)).item()
+                q_val_next = torch.max(q_net(t.next_state.to('cuda'))).item()
                 targets[i][t.action] = t.reward + gamma * q_val_next
-        outputs = q_net(inputs.view(num_transistions, 4, 84, 84))
+        outputs = q_net(inputs)
         optimizer.zero_grad()
-        loss = criterion(outputs, targets.view(num_transistions, num_actions))
+        criterion.to('cuda')
+        loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
         return loss.item()
@@ -111,6 +112,6 @@ class DQNAgent:
 
 if __name__ == '__main__':
     eps = 1.0
-    for i in range(50000):
-        eps = DQNAgent.get_epsilon_using_linear_annealing(i, 50000, 0.5, 1.0)
+    for i in range(1000000):
+        eps = DQNAgent.get_epsilon_using_linear_annealing(i, 1000000, 0.1, 1.0)
         i % 100 == 0 and print(i, eps)
