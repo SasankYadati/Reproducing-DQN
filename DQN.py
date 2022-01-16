@@ -4,7 +4,9 @@ import torchvision.transforms.functional as F
 from collections import deque
 import random
 from network import CNN
-from torch.profiler import profile, record_function, ProfilerActivity
+from utils import plot
+
+torch.manual_seed(0)
 
 class Transition:
     def __init__(self, curr_state, action, reward, next_state, is_terminal):
@@ -57,7 +59,7 @@ class DQNAgent:
         self.MAX_ANNEALING_STEPS = 1000000
         self.BATCH_SIZE = 32
         self.GAMMA = 0.9
-        self.UPDATE_TARGET_STEP = 500
+        self.UPDATE_TARGET_STEP = 250
         self.criterion = torch.nn.MSELoss().to('cuda')
         self.optimizer = torch.optim.RMSprop(self.q_network.parameters())
 
@@ -73,7 +75,7 @@ class DQNAgent:
         transition = Transition(self.curr_state, self.action, reward, next_state, is_done)
         if self.curr_state is not None:
             self.replay_memory.append(transition)
-        self.curr_state = next_state
+        self.curr_state = next_state.clone()
         epsilon = DQNAgent.get_epsilon_using_linear_annealing(self.step, self.MAX_ANNEALING_STEPS, self.EPSILON_MIN, self.EPSILON_INITIAL)
         self.step += 1
         if self.step % self.UPDATE_TARGET_STEP == 0:
@@ -111,9 +113,10 @@ class DQNAgent:
         return float(loss)
 
     def preprocess(observation:torch.Tensor):
-        observation = torch.Tensor(observation).reshape(3, 210, 160)
+        observation = torch.Tensor(observation).reshape(210, 160, 3).permute(2, 0, 1)
         observation = F.rgb_to_grayscale(observation)
-        observation = F.resize(observation, size=(110, 84))
+        observation = F.resize(torch.Tensor(observation), size=(110, 84))
+        # plot([observation.permute(1,2,0)])
         return observation
 
     def concate_observations(q:deque, n:int):
