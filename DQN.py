@@ -58,17 +58,18 @@ class DQNAgent:
         if self.step % self.UPDATE_TARGET_STEP == 0:
             self.q_network_target.load_state_dict(self.q_network.state_dict())
             self.q_network_target.eval()
-        if random.random() <= epsilon:
-            self.action = random.randint(0, self.num_actions-1)
-        else:
-            self.action = torch.argmax(self.q_network_target(self.curr_state.to('cuda')), 1)[0]            
+        if not is_done:
+            if random.random() <= epsilon:
+                self.action = random.randint(0, self.num_actions-1)
+            else:
+                self.action = torch.argmax(self.q_network_target(self.curr_state.to('cuda')), 1)[0]
         loss = 0.0
         if self.replay_memory.size >= self.batch_size:
             transistion_samples = self.replay_memory.sample(self.batch_size)
             loss = self.update_network(transistion_samples, self.q_network, self.GAMMA, self.criterion, self.optimizer, self.num_actions)
             self.step % self.UPDATE_TARGET_STEP == 0 and print(f"Step {self.step} loss {loss}")
         if is_done:
-            self.initialize_obs_q()
+            self.latest_observations_preprocessed = initialize_obs_q(self.target_obs_size)
         return self.action, epsilon
 
 
