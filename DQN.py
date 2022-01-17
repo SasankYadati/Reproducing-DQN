@@ -1,10 +1,9 @@
-from typing import Deque
 import torch
 import torchvision.transforms.functional as F
 from collections import deque
 import random
 from network import CNN
-from utils import plot
+from utils import plot, concate_observations, initialize_obs_q
 
 torch.manual_seed(0)
 
@@ -16,121 +15,90 @@ class Transition:
         self.next_state = next_state
         self.is_terminal = is_terminal
 
-class ReplayMemory:
-    def __init__(self, max_size):
-        self.buffer = [None] * max_size
-        self.max_size = max_size
-        self.index = 0
-        self.size = 0
-
-    def append(self, obj):
-        old_obj = self.buffer[self.index]
-        del old_obj
-        self.buffer[self.index] = obj
-        self.size = min(self.size + 1, self.max_size)
-        self.index = (self.index + 1) % self.max_size
-
-    def sample(self, batch_size):
-        indices = random.sample(range(self.size), batch_size)
-        return [self.buffer[index] for index in indices]
-
 class DQNAgent:
-    def __init__(self, num_actions):
-        self.MEMORY_CAPCITY = 50000
-        self.replay_memory = ReplayMemory(self.MEMORY_CAPCITY)
+    def __init__(self, num_actions, replay_memory, preprocess_fn, target_obs_size, eps_scheduler, batch_size):
+        self.replay_memory = replay_memory
+        
         self.q_network = CNN(num_actions).to('cuda')
         self.q_network_target = CNN(num_actions).to('cuda')
-        self.latest_observations_preprocessed = deque(
-            [
-                torch.zeros(1,110,84),
-                torch.zeros(1,110,84),
-                torch.zeros(1,110,84),
-                torch.zeros(1,110,84)
-            ],
-            maxlen=4
-        )
+        self.q_network_target.eval()
+        
         self.num_actions = num_actions
+        
         self.last_state = None
         self.action = None
         self.curr_state = None
+        
         self.step = 0
-        self.EPSILON_MIN = 0.1
-        self.EPSILON_INITIAL = 1.0
-        self.MAX_ANNEALING_STEPS = 1000000
-        self.BATCH_SIZE = 32
+        self.eps_scheduler = eps_scheduler
+        self.batch_size = batch_size
+        
+        self.preprocess_fn = preprocess_fn
+        
+        self.target_obs_size = target_obs_size
+        self.latest_observations_preprocessed = initialize_obs_q(target_obs_size)
+        
+        self.criterion = torch.nn.HuberLoss().to('cuda')
+        self.optimizer = torch.optim.Adam(self.q_network.parameters())
+        
         self.GAMMA = 0.9
         self.UPDATE_TARGET_STEP = 250
-        self.criterion = torch.nn.MSELoss().to('cuda')
-        self.optimizer = torch.optim.RMSprop(self.q_network.parameters())
-
-    def get_epsilon_using_linear_annealing(step, max_steps, min_epsilon, initial_epsilon):
-        if step > max_steps:
-            return min_epsilon
-        return ((min_epsilon - initial_epsilon) * (step) / (max_steps)) + initial_epsilon
 
     def policy(self, observation, reward, is_done):
-        observation_processed = DQNAgent.preprocess(observation)
+        observation_processed = self.preprocess_fn(observation, self.target_obs_size)
         self.latest_observations_preprocessed.append(observation_processed)        
-        next_state = DQNAgent.concate_observations(self.latest_observations_preprocessed, 4)
+        next_state = concate_observations(self.latest_observations_preprocessed)
+        # plot(next_state.permute(0,2,3,1))
         transition = Transition(self.curr_state, self.action, reward, next_state, is_done)
         if self.curr_state is not None:
             self.replay_memory.append(transition)
         self.curr_state = next_state.clone()
-        epsilon = DQNAgent.get_epsilon_using_linear_annealing(self.step, self.MAX_ANNEALING_STEPS, self.EPSILON_MIN, self.EPSILON_INITIAL)
+        epsilon = self.eps_scheduler.value(self.step)
         self.step += 1
         if self.step % self.UPDATE_TARGET_STEP == 0:
             self.q_network_target.load_state_dict(self.q_network.state_dict())
+            self.q_network_target.eval()
         if random.random() <= epsilon:
             self.action = random.randint(0, self.num_actions-1)
         else:
             self.action = torch.argmax(self.q_network_target(self.curr_state.to('cuda')), 1)[0]            
         loss = 0.0
-        if self.replay_memory.size >= self.BATCH_SIZE:
-            transistion_samples = self.replay_memory.sample(self.BATCH_SIZE)
+        if self.replay_memory.size >= self.batch_size:
+            transistion_samples = self.replay_memory.sample(self.batch_size)
             loss = self.update_network(transistion_samples, self.q_network, self.GAMMA, self.criterion, self.optimizer, self.num_actions)
-            self.step % 250 == 0 and print(f"Step {self.step} loss {loss}")                
+            self.step % self.UPDATE_TARGET_STEP == 0 and print(f"Step {self.step} loss {loss}")
+        if is_done:
+            self.initialize_obs_q()
         return self.action, epsilon
 
 
     def update_network(self, transitions, q_net, gamma, criterion, optimizer, num_actions):
+        self.q_network.train()
         num_transistions = len(transitions)
         if num_transistions == 0:
             return None 
-        inputs = torch.cat([t.curr_state for t in transitions]).reshape(num_transistions, 4, 110, 84).to('cuda')
-        targets = torch.cat([torch.zeros((1,num_actions)) for _ in transitions]).reshape(num_transistions, num_actions).to('cuda')
+        inputs = torch.cat([t.curr_state for t in transitions]).to('cuda')
+        targets = torch.zeros(num_transistions).to('cuda')
+        one_hot_actions = torch.zeros((num_transistions, num_actions)).to('cuda')
         for i,t in enumerate(transitions):
+            one_hot_actions[i][t.action] = 1
             if t.is_terminal:
-                targets[i][t.action] = t.reward
+                targets[i] = t.reward
             else:
-                q_val_next = torch.max(q_net(t.next_state.to('cuda'))).item()
-                targets[i][t.action] = t.reward + gamma * q_val_next
-        outputs = q_net(inputs)
-        optimizer.zero_grad()
+                q_val_next = q_net(t.next_state.to('cuda'))
+                q_val_next = torch.max(q_val_next).item()
+                targets[i] = t.reward + gamma * q_val_next
+        outputs = torch.sum(q_net(inputs) * one_hot_actions, 1)
+        optimizer.zero_grad(set_to_none=True)
         loss = criterion(outputs, targets)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(q_net.parameters(), 1.0)
         optimizer.step()
         return float(loss)
-
-    def preprocess(observation:torch.Tensor):
-        observation = torch.Tensor(observation).reshape(210, 160, 3).permute(2, 0, 1)
-        observation = F.rgb_to_grayscale(observation)
-        observation = F.resize(torch.Tensor(observation), size=(110, 84))
-        # plot([observation.permute(1,2,0)])
-        return observation
-
-    def concate_observations(q:deque, n:int):
-        assert n <= len(q)
-        state = torch.unsqueeze(torch.cat([q[x] for x in range(n)]), 0)
-        return state
-
-if __name__ == '__main__':
-    # eps = 1.0
-    # for i in range(1000000):
-    #     eps = DQNAgent.get_epsilon_using_linear_annealing(i, 1000000, 0.01, 1.0)
-    #     i % 100 == 0 and print(i, eps)
-    mem = ReplayMemory(10)
-    for i in range(100):
-        if mem.size > 4:
-            print(mem.buffer)
-        mem.append(i)
+    
+    def evaluate(self, states):
+        self.q_network.eval()
+        q_values = self.q_network(torch.cat(states).to('cuda'))
+        q_values, _ = torch.max(q_values, 1)
+        q_values = torch.mean(q_values)
+        return q_values.item()
